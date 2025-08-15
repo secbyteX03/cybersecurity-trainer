@@ -130,6 +130,51 @@ Example lesson structure:
 }
 ```
 
+### Profile & Progress
+
+The trainer tracks your progress across all modules and challenges. When you first start, you'll be prompted to create a profile or select an existing one.
+
+#### Key Features:
+- **Personalized Progress Tracking**: Your progress is saved automatically
+- **Login Streaks**: Maintain a daily login streak to stay motivated
+- **Achievements**: Earn achievements for completing modules and challenges
+- **Profile Management**: Multiple profiles supported for different users
+
+Your profile data is stored locally in the `.profiles` directory in JSON format. Each profile includes:
+- Username and creation date
+- Progress in each module
+- Completed challenges and lessons
+- Login streak and last login date
+
+#### Example Profile Structure:
+```json
+{
+  "username": "cyberlearner",
+  "created_at": "2025-08-15T12:00:00.000000",
+  "last_login": "2025-08-15T14:30:00.000000",
+  "login_streak": 3,
+  "last_login_date": "2025-08-15",
+  "progress": {
+    "basics": 8,
+    "networking": 5,
+    "forensics": 3,
+    "permissions": 0,
+    "challenges_completed": ["log_analysis", "network_scan"],
+    "lessons_completed": {
+      "linux_basics": {
+        "completed_at": "2025-08-14T10:15:00.000000",
+        "score": 95
+      }
+    }
+  },
+  "achievements": ["first_lesson", "week_streak"],
+  "preferences": {
+    "theme": "default",
+    "notifications": true
+  }
+}
+```
+
 ### Interactive Modules
 
 2. **Example Session**:

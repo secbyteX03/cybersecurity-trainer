@@ -14,19 +14,23 @@ from rich import print as rprint
 from pathlib import Path
 from modules import basics, networking, forensics, permissions, challenge
 from modules.lesson_runner import LessonRunner, run_lesson_interactive
+from modules.profile_manager import ProfileManager, select_or_create_profile
 
 console = Console()
 
 class CyberSecTrainer:
     def __init__(self):
         self.console = console
-        self.user_progress = {
-            'basics': 0,
-            'networking': 0, 
-            'forensics': 0,
-            'permissions': 0,
-            'challenges_completed': []
-        }
+        self.profile_manager = ProfileManager()
+        self.current_profile = None
+        
+    def load_profile(self):
+        """Load or create a user profile."""
+        self.current_profile = select_or_create_profile()
+        if not self.current_profile:
+            self.console.print("\n[red]No profile selected. Exiting...[/red]")
+            return False
+        return True
 
     def show_banner(self):
         banner = """
@@ -40,22 +44,30 @@ class CyberSecTrainer:
         console.print(banner, style="bold blue")
 
     def show_main_menu(self):
-        console.print("\n=== CYBERSECURITY COMMAND TRAINER ===\n", style="bold blue")
-        console.print("MAIN MENU\n", style="bold underline")
+        if not self.current_profile:
+            return
+            
+        console.print(f"\n=== CYBERSECURITY COMMAND TRAINER ===\n", style="bold blue")
+        console.print(f"Welcome, [bold cyan]{self.current_profile['username']}[/bold cyan]!")
+        console.print(f"Login Streak: [bold yellow]{self.current_profile['login_streak']} days[/bold yellow]\n")
         
         # Initialize lesson runner to check for available lessons
         lesson_runner = LessonRunner()
         lessons = lesson_runner.get_available_lessons()
         has_lessons = len(lessons) > 0
         
+        # Get progress from profile
+        progress = self.current_profile['progress']
+        
         menu_items = [
             ("1", "Guided Lessons", "Step-by-step learning" if has_lessons else "No lessons available"),
-            ("2", "Linux Basics", f"Progress: {self.user_progress['basics']}/10"),
-            ("3", "Networking", f"Progress: {self.user_progress['networking']}/8"),
-            ("4", "Digital Forensics", f"Progress: {self.user_progress['forensics']}/6"),
-            ("5", "Permissions", f"Progress: {self.user_progress['permissions']}/7"),
-            ("6", "Challenges", f"Completed: {len(self.user_progress['challenges_completed'])}/5"),
-            ("7", "Help", "Command reference and tips"),
+            ("2", "Linux Basics", f"Progress: {progress['basics']}/10"),
+            ("3", "Networking", f"Progress: {progress['networking']}/8"),
+            ("4", "Digital Forensics", f"Progress: {progress['forensics']}/6"),
+            ("5", "Permissions", f"Progress: {progress['permissions']}/7"),
+            ("6", "Challenges", f"Completed: {len(progress['challenges_completed'])}/5"),
+            ("7", "My Profile", "View profile and progress"),
+            ("8", "Help", "Command reference and tips"),
             ("0", "Exit", "Quit the trainer")
         ]
         
@@ -77,34 +89,93 @@ class CyberSecTrainer:
         console.print("- Practice the commands in a real Linux VM after learning here")
         console.print("- Complete basic modules before attempting challenges\n")
 
+    def run_module(self, module_name):
+        """Run a specific training module."""
+        if not self.current_profile:
+            return
+            
+        module_map = {
+            "basics": ("Linux Basics", basics.BasicsModule()),
+            "networking": ("Networking", networking.Networking()),
+            "forensics": ("Digital Forensics", forensics.ForensicsModule()),
+            "permissions": ("Permissions", permissions.PermissionsModule())
+        }
+        
+        if module_name in module_map:
+            module_title, trainer = module_map[module_name]
+            console.print(f"\n=== {module_title.upper()} MODULE ===\n", style="bold green")
+            
+            # Run the module and get the score
+            score = trainer.run()
+            
+            # Update profile with the new score if it's higher than before
+            if score > self.current_profile['progress'][module_name]:
+                self.profile_manager.update_progress(module_name, score)
+                self.current_profile = self.profile_manager.load_profile(self.current_profile['username'])
+                console.print(f"\n[green]Your {module_title} progress has been updated to {score}/10![/green]")
+            
+            # Pause before returning to menu
+            console.print("\nPress Enter to return to the main menu...", style="dim")
+            input()
+        else:
+            console.print(f"\n[red]Module '{module_name}' not found.[/red]")
+
+    def run_challenges(self):
+        """Run the challenges module."""
+        if not self.current_profile:
+            return
+            
+        challenge_trainer = challenge.ChallengeModule(self.current_profile['progress'])
+        completed = challenge_trainer.run()
+        
+        if completed:
+            # Update profile with completed challenges
+            self.profile_manager.update_progress("challenge", completed)
+            self.current_profile = self.profile_manager.load_profile(self.current_profile['username'])
+            
+            # Show completion message
+            if len(completed) == 1:
+                console.print(f"\n[green]Challenge '{completed[0]}' completed![/green]")
+            else:
+                console.print(f"\n[green]Completed {len(completed)} challenges![/green]")
+            
+            # Pause before returning to menu
+            console.print("\nPress Enter to return to the main menu...", style="dim")
+            input()
+
     def run(self):
+        """Main entry point for the trainer."""
         self.show_banner()
         
-        while True:
-            console.print("\n" + "="*60)
-            self.show_main_menu()
+        # Load or create a profile
+        if not self.load_profile():
+            return
             
-            choice = Prompt.ask("\nSelect a training module (1-6, 0 to exit)", choices=["1", "2", "3", "4", "5", "6", "0"])
+        while True:
+            self.show_main_menu()
+            choice = input("\nSelect an option (0 to exit): ").strip()
             
             if choice == "0":
-                console.print("\nGoodbye! Happy learning and stay secure!", style="bold green")
+                console.print("\n[bold]Thank you for using the Cybersecurity Command Trainer![/bold]")
                 break
             elif choice == "1":
                 self.run_guided_lessons()
             elif choice == "2":
-                self.run_module('basics')
+                self.run_module("basics")
             elif choice == "3":
-                self.run_module('networking')
+                self.run_module("networking")
             elif choice == "4":
-                self.run_module('forensics')
+                self.run_module("forensics")
             elif choice == "5":
-                self.run_module('permissions')
+                self.run_module("permissions")
             elif choice == "6":
-                challenge_trainer = challenge.ChallengeModule(self.user_progress)
-                completed = challenge_trainer.run()
-                self.user_progress['challenges_completed'].extend(completed)
+                self.run_challenges()
             elif choice == "7":
+                self.show_profile()
+            elif choice == "8":
                 self.show_help()
+            else:
+                console.print("\n[red]Invalid choice. Please try again.[/red]")
 
 if __name__ == "__main__":
     try:
