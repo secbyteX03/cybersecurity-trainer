@@ -1,0 +1,51 @@
+# Challenge Metadata
+id: log_analysis
+module: forensics
+title: Suspicious Log Analysis
+difficulty: intermediate
+points: 100
+prerequisites:
+  - basics: 5
+  - forensics: 2
+
+description: |
+  You are a security analyst investigating a potential breach.
+  A suspicious log file has been found in /var/log/auth.log.
+  Analyze the log to find evidence of unauthorized access.
+
+# Initial setup (files, directories, etc.)
+setup:
+  - touch /var/log/auth.log
+  - echo "Aug 15 08:30:01 server sshd[1234]: Accepted password for admin from 192.168.1.100" > /var/log/auth.log
+  - echo "Aug 15 09:15:22 server sshd[2345]: Failed password for root from 192.168.1.200" >> /var/log/auth.log
+  - echo "Aug 15 09:15:25 server sshd[2346]: Failed password for root from 192.168.1.200" >> /var/log/auth.log
+  - echo "Aug 15 09:15:28 server sshd[2347]: Accepted password for root from 192.168.1.200" >> /var/log/auth.log
+
+# Expected solution (for auto-grading)
+solution:
+  commands:
+    - grep "Failed password for root" /var/log/auth.log
+    - grep -i "accepted password" /var/log/auth.log
+  expected_output: |
+    Aug 15 09:15:22 server sshd[2345]: Failed password for root from 192.168.1.200
+    Aug 15 09:15:25 server sshd[2346]: Failed password for root from 192.168.1.200
+    Aug 15 08:30:01 server sshd[1234]: Accepted password for admin from 192.168.1.100
+    Aug 15 09:15:28 server sshd[2347]: Accepted password for root from 192.168.1.200
+
+# Hints system (3 levels)
+hints:
+  - "Look for failed login attempts in the auth log"
+  - "Try using grep to filter for 'Failed password' and 'Accepted password'"
+  - "The commands you need are: 'grep \"Failed password for root\" /var/log/auth.log' and 'grep -i \"accepted password\" /var/log/auth.log'"
+
+# Success message
+success_message: |
+  Great job! You've identified suspicious login attempts.
+  The logs show multiple failed root login attempts followed by a successful one from the same IP.
+  This is a common sign of a brute force attack.
+
+# Learning resources
+resources:
+  - "Linux Log Files: /var/log/"
+  - "grep command tutorial"
+  - "SSH security best practices"
