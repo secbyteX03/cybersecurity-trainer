@@ -1,0 +1,47 @@
+{
+  "module": "linux_basics",
+  "title": "Linux Basics",
+  "description": "Learn essential Linux commands and concepts",
+  "lessons": [
+    {
+      "id": "intro",
+      "title": "Introduction to Linux",
+      "content": "Welcome to Linux Basics! In this module, you'll learn essential Linux commands.\n\nLinux is a powerful operating system used by many servers and security professionals.\n\nType 'next' to continue.",
+      "expected_input": "next"
+    },
+    {
+      "id": "pwd",
+      "title": "Finding Your Way: pwd",
+      "content": "The 'pwd' command shows your current working directory.\n\nTry it now by typing: pwd",
+      "command": "pwd",
+      "hint": "Type 'pwd' and press Enter",
+      "success_message": "Great! You've learned how to find your current directory."
+    },
+    {
+      "id": "ls",
+      "title": "Listing Files: ls",
+      "content": "The 'ls' command lists files in the current directory.\n\nTry it now by typing: ls",
+      "command": "ls",
+      "hint": "Type 'ls' and press Enter",
+      "success_message": "Excellent! You can now list directory contents."
+    },
+    {
+      "id": "cd",
+      "title": "Changing Directories: cd",
+      "content": "The 'cd' command changes directories.\n\nTry moving to the home directory by typing: cd ~",
+      "command": "cd ~",
+      "hint": "Type 'cd ~' and press Enter",
+      "success_message": "Well done! You've learned how to navigate directories.",
+      "validate": {
+        "command": "pwd",
+        "contains": "/home"
+      }
+    },
+    {
+      "id": "completion",
+      "title": "Module Complete!",
+      "content": "Congratulations! You've completed the Linux Basics module.\n\nYou've learned:\n- How to view your current directory (pwd)\n- How to list files (ls)\n- How to navigate directories (cd)\n\nType 'exit' to return to the main menu.",
+      "is_completion": true
+    }
+  ]
+}

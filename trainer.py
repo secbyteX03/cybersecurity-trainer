@@ -11,7 +11,9 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.prompt import Prompt
 from rich import print as rprint
+from pathlib import Path
 from modules import basics, networking, forensics, permissions, challenge
+from modules.lesson_runner import LessonRunner, run_lesson_interactive
 
 console = Console()
 
@@ -41,13 +43,19 @@ class CyberSecTrainer:
         console.print("\n=== CYBERSECURITY COMMAND TRAINER ===\n", style="bold blue")
         console.print("MAIN MENU\n", style="bold underline")
         
+        # Initialize lesson runner to check for available lessons
+        lesson_runner = LessonRunner()
+        lessons = lesson_runner.get_available_lessons()
+        has_lessons = len(lessons) > 0
+        
         menu_items = [
-            ("1", "Linux Basics", f"Progress: {self.user_progress['basics']}/10"),
-            ("2", "Networking", f"Progress: {self.user_progress['networking']}/8"),
-            ("3", "Digital Forensics", f"Progress: {self.user_progress['forensics']}/6"),
-            ("4", "Permissions", f"Progress: {self.user_progress['permissions']}/7"),
-            ("5", "Challenges", f"Completed: {len(self.user_progress['challenges_completed'])}/5"),
-            ("6", "Help", "Command reference and tips"),
+            ("1", "Guided Lessons", "Step-by-step learning" if has_lessons else "No lessons available"),
+            ("2", "Linux Basics", f"Progress: {self.user_progress['basics']}/10"),
+            ("3", "Networking", f"Progress: {self.user_progress['networking']}/8"),
+            ("4", "Digital Forensics", f"Progress: {self.user_progress['forensics']}/6"),
+            ("5", "Permissions", f"Progress: {self.user_progress['permissions']}/7"),
+            ("6", "Challenges", f"Completed: {len(self.user_progress['challenges_completed'])}/5"),
+            ("7", "Help", "Command reference and tips"),
             ("0", "Exit", "Quit the trainer")
         ]
         
@@ -82,22 +90,20 @@ class CyberSecTrainer:
                 console.print("\nGoodbye! Happy learning and stay secure!", style="bold green")
                 break
             elif choice == "1":
-                basics_trainer = basics.BasicsModule()
-                self.user_progress['basics'] = basics_trainer.run()
+                self.run_guided_lessons()
             elif choice == "2":
-                net_trainer = networking.NetworkingModule()
-                self.user_progress['networking'] = net_trainer.run()
+                self.run_module('basics')
             elif choice == "3":
-                forensics_trainer = forensics.ForensicsModule()
-                self.user_progress['forensics'] = forensics_trainer.run()
+                self.run_module('networking')
             elif choice == "4":
-                perms_trainer = permissions.PermissionsModule()
-                self.user_progress['permissions'] = perms_trainer.run()
+                self.run_module('forensics')
             elif choice == "5":
+                self.run_module('permissions')
+            elif choice == "6":
                 challenge_trainer = challenge.ChallengeModule(self.user_progress)
                 completed = challenge_trainer.run()
                 self.user_progress['challenges_completed'].extend(completed)
-            elif choice == "6":
+            elif choice == "7":
                 self.show_help()
 
 if __name__ == "__main__":

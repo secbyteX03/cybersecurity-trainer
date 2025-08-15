@@ -87,9 +87,50 @@ cybersecurity-trainer/
 ## How to Use
 
 1. **Main Menu Navigation**:
-   - Use number keys (0-6) to select options
+   - Use number keys (0-7) to select options
    - Type 'back' during lessons to return to the main menu
    - Type 'exit' or use Ctrl+C to quit
+
+### Guided Lesson Mode
+
+The trainer includes a guided learning path that takes you through cybersecurity concepts step by step:
+
+1. From the main menu, select "Guided Lessons" (option 1)
+2. Choose a lesson from the available options
+3. Follow the on-screen instructions to complete each step
+4. Type the commands exactly as shown to progress
+5. Use the following commands during lessons:
+   - `next` - Go to the next step
+   - `prev` - Go back to the previous step
+   - `exit` - Return to the lesson selection
+   - `help` - Show available commands
+
+Example lesson structure:
+```json
+{
+  "module": "linux_basics",
+  "title": "Linux Basics",
+  "description": "Learn essential Linux commands and concepts",
+  "lessons": [
+    {
+      "id": "intro",
+      "title": "Introduction to Linux",
+      "content": "Welcome to Linux Basics! In this module, you'll learn essential Linux commands.",
+      "expected_input": "next"
+    },
+    {
+      "id": "pwd",
+      "title": "Finding Your Way: pwd",
+      "content": "The 'pwd' command shows your current working directory.\n\nTry it now by typing: pwd",
+      "command": "pwd",
+      "hint": "Type 'pwd' and press Enter",
+      "success_message": "Great! You've learned how to find your current directory."
+    }
+  ]
+}
+```
+
+### Interactive Modules
 
 2. **Example Session**:
    ```
