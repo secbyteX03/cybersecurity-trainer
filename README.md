@@ -237,8 +237,8 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ## Contact & Support
 
 - **GitHub Issues**: [Report Issues](https://github.com/secbyteX03/cybersecurity-trainer/issues)
-- **Email**: [Your Email]
-- **Twitter**: [@YourHandle]
+- **Email**: [amaizing.faith1@gmail.com](mailto:amaizing.faith1@gmail.com)
+- **Twitter**: [@faith_magret](https://x.com/faith_magret)
 
 ---
 
