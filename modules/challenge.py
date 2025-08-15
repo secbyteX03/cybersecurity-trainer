@@ -1,35 +1,213 @@
 """
-Challenge Module - Hands-on cybersecurity scenarios
+Challenge Module - Hands-on cybersecurity scenarios with auto-grader and hints
 """
-import random
+import os
 import time
+from typing import List, Dict, Any
+from pathlib import Path
+
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import Prompt, Confirm
+from rich.prompt import Prompt, Confirm, IntPrompt
 from rich.table import Table
+from rich.markdown import Markdown
+
+from .challenge_loader import ChallengeLoader
 
 console = Console()
 
 class ChallengeModule:
     def __init__(self, user_progress):
+        """Initialize the Challenge Module with user progress tracking."""
         self.user_progress = user_progress
-        self.completed_challenges = []
+        self.completed_challenges = user_progress.get('challenges_completed', [])
+        self.hints_used = {}
+        self.challenge_loader = ChallengeLoader()
+        self.current_challenge = None
 
-    def check_prerequisites(self):
-        """Check if user has completed enough basic modules"""
-        required = {
-            'basics': 5,  # At least 5/10 commands completed
-            'networking': 3,
-            'forensics': 2,
-            'permissions': 2
-        }
+    def _display_challenge_info(self, challenge: Dict) -> None:
+        """Display challenge information and description."""
+        console.print(Panel.fit(
+            f"[bold]{challenge['title']}[/bold]\n"
+            f"Difficulty: {challenge.get('difficulty', 'medium')} | "
+            f"Points: {challenge.get('points', 50)}",
+            style="blue"
+        ))
         
-        for module, min_score in required.items():
-            if self.user_progress.get(module, 0) < min_score:
-                console.print(f"[red]You need to complete more of the {module} module first![/]")
-                console.print(f"Required: {min_score} commands, Completed: {self.user_progress.get(module, 0)}")
+        console.print(Markdown(challenge['description']))
+        console.print("\n[bold]Your task:[/] " + challenge.get('task', 'Complete the challenge'))
+    
+    def _show_hint(self, challenge: Dict, hint_level: int) -> None:
+        """Show a hint for the current challenge."""
+        hints = challenge.get('hints', [])
+        if not hints:
+            console.print("[yellow]No hints available for this challenge.[/]")
+            return
+            
+        hint_level = min(hint_level, len(hints) - 1)
+        console.print(f"\n[bold]Hint ({hint_level + 1}/{len(hints)}):[/] " + hints[hint_level])
+        
+        # Track hints used
+        if challenge['id'] not in self.hints_used:
+            self.hints_used[challenge['id']] = []
+        if hint_level not in self.hints_used[challenge['id']]:
+            self.hints_used[challenge['id']].append(hint_level)
+    
+    def _run_challenge_commands(self) -> List[str]:
+        """Run the challenge and collect user commands."""
+        console.print("\n[bold]Enter your commands (one per line, 'submit' when done):[/]")
+        commands = []
+        
+        while True:
+            try:
+                cmd = Prompt.ask("\n> ").strip()
+                if not cmd:
+                    continue
+                    
+                if cmd.lower() == 'submit':
+                    if not commands:
+                        console.print("[yellow]No commands entered. Type 'exit' to quit.[/]")
+                        continue
+                    return commands
+                    
+                if cmd.lower() == 'exit':
+                    if Confirm.ask("\nAre you sure you want to quit this challenge?"):
+                        return None
+                    continue
+                    
+                commands.append(cmd)
+                
+            except KeyboardInterrupt:
+                if Confirm.ask("\nAre you sure you want to quit this challenge?"):
+                    return None
+    
+    def run_challenge(self, challenge_id: str) -> bool:
+        """Run a specific challenge with auto-grader and hints."""
+        challenge = self.challenge_loader.get_challenge(challenge_id)
+        if not challenge:
+            console.print(f"[red]Challenge '{challenge_id}' not found.[/]")
+            return False
+            
+        self.current_challenge = challenge
+        console.clear()
+        
+        # Display challenge info
+        self._display_challenge_info(challenge)
+        
+        hint_level = -1  # Start with no hint
+        
+        while True:
+            # Show available commands
+            console.print("\n[bold]Available commands:[/]")
+            console.print("- Type your command and press Enter")
+            console.print("- 'hint' - Get a hint")
+            console.print("- 'submit' - Submit your solution")
+            console.print("- 'exit' - Quit the challenge")
+            
+            # Run the challenge
+            commands = self._run_challenge_commands()
+            if commands is None:  # User chose to exit
                 return False
-        return True
+                
+            # Validate solution
+            result = self.challenge_loader.validate_solution(challenge_id, commands)
+            
+            if result['success']:
+                self._on_challenge_complete(challenge, result)
+                return True
+            else:
+                console.print(f"\n[red]{result['message']}[/]")
+                if 'hint' in result:
+                    console.print(f"[yellow]Hint: {result['hint']}[/]")
+                
+                # Offer another hint
+                if Confirm.ask("\nWould you like to see a hint?"):
+                    hint_level = min(hint_level + 1, 2)  # Max 3 hints (0, 1, 2)
+                    self._show_hint(challenge, hint_level)
+    
+    def _on_challenge_complete(self, challenge: Dict, result: Dict) -> None:
+        """Handle challenge completion."""
+        console.print("\n" + "=" * 60)
+        console.print("[bold green]🎉 Challenge Completed! 🎉[/]")
+        console.print(f"[bold]Points earned:[/] {result.get('points', 0)}")
+        
+        # Show success message
+        if 'success_message' in challenge:
+            console.print("\n" + challenge['success_message'])
+        
+        # Update completed challenges
+        if challenge['id'] not in self.completed_challenges:
+            self.completed_challenges.append(challenge['id'])
+            
+        # Show resources for further learning
+        if 'resources' in challenge and challenge['resources']:
+            console.print("\n[bold]Learn more:[/]")
+            for resource in challenge['resources']:
+                console.print(f"- {resource}")
+    
+    def list_available_challenges(self) -> List[Dict]:
+        """List all challenges the user can attempt."""
+        return self.challenge_loader.get_available_challenges(self.user_progress)
+        
+    def _display_challenge_list(self) -> None:
+        """Display available challenges in a formatted table."""
+        challenges = self.list_available_challenges()
+        
+        if not challenges:
+            console.print("\n[yellow]No challenges available. Complete more modules to unlock challenges![/]")
+            return []
+            
+        table = Table(title="Available Challenges", show_header=True, header_style="bold magenta")
+        table.add_column("#", style="cyan", width=4)
+        table.add_column("Challenge", style="green")
+        table.add_column("Difficulty", style="yellow")
+        table.add_column("Points", style="blue")
+        table.add_column("Status", style="cyan")
+        
+        for i, challenge in enumerate(challenges, 1):
+            status = "[green]✓ Completed[/]" if challenge['id'] in self.completed_challenges else "[yellow]Not Started[/]"
+            table.add_row(
+                str(i),
+                challenge['title'],
+                challenge.get('difficulty', 'medium').title(),
+                str(challenge.get('points', 50)),
+                status
+            )
+            
+        console.print()
+        console.print(table)
+        return challenges
+        
+    def run(self) -> List[str]:
+        """Run the challenges interface."""
+        console.print("\n[bold]Cybersecurity Challenges[/bold]")
+        console.print("Test your skills with real-world scenarios!\n")
+        
+        while True:
+            challenges = self._display_challenge_list()
+            if not challenges:
+                return self.completed_challenges
+                
+            console.print("\n[bold]Options:[/]")
+            console.print("- Enter a challenge number to start")
+            console.print("- 'exit' to return to main menu")
+            
+            choice = Prompt.ask("\nSelect an option").strip().lower()
+            
+            if choice == 'exit':
+                return self.completed_challenges
+                
+            try:
+                idx = int(choice) - 1
+                if 0 <= idx < len(challenges):
+                    self.run_challenge(challenges[idx]['id'])
+                    # Update user progress after completing a challenge
+                    if hasattr(self, 'on_progress_update'):
+                        self.on_progress_update('challenges_completed', self.completed_challenges)
+                else:
+                    console.print("[red]Invalid challenge number.[/]")
+            except ValueError:
+                console.print("[red]Please enter a number or 'exit'.[/]")
 
     def run_challenge_1(self):
         """Challenge 1: Suspicious Log Analysis"""
