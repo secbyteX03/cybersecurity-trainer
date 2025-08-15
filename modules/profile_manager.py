@@ -14,6 +14,8 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.prompt import Prompt, Confirm
 
+from .badges import leaderboard, badge_manager
+
 console = Console()
 
 class ProfileManager:
@@ -131,34 +133,71 @@ class ProfileManager:
         self.current_profile = profile
         return profile
     
-    def update_progress(self, module: str, value: Any) -> None:
-        """Update progress for a module.
+    def update_progress(self, module: str, challenge: str, score: int = 10) -> bool:
+        """Update the user's progress with a completed challenge.
         
         Args:
-            module: Module name (e.g., 'basics', 'networking')
-            value: Progress value (e.g., score, list of completed items)
+            module: The module name
+            challenge: The challenge name
+            score: Points to award for completion
+            
+        Returns:
+            bool: True if progress was updated, False otherwise
         """
         if not self.current_profile:
-            raise RuntimeError("No profile is currently loaded")
+            return False
             
-        if module == 'challenge' and isinstance(value, list):
-            # For challenges, we append to the completed list
-            completed = set(self.current_profile['progress']['challenges_completed'])
-            completed.update(value)
-            self.current_profile['progress']['challenges_completed'] = list(completed)
-        elif module == 'lesson' and isinstance(value, dict):
-            # For lessons, we update the lessons_completed dict
-            lesson_id = value.get('id')
-            if lesson_id:
-                self.current_profile['progress']['lessons_completed'][lesson_id] = {
-                    'completed_at': datetime.now().isoformat(),
-                    'score': value.get('score', 0)
+        try:
+            # Update completed challenges
+            if "completed_challenges" not in self.current_profile:
+                self.current_profile["completed_challenges"] = {}
+                
+            challenge_key = f"{module}:{challenge}"
+            if challenge_key not in self.current_profile["completed_challenges"]:
+                self.current_profile["completed_challenges"][challenge_key] = {
+                    "completed_at": datetime.now().isoformat(),
+                    "score": score
                 }
-        elif module in self.current_profile['progress']:
-            # For modules with numeric progress
-            self.current_profile['progress'][module] = value
+                
+                # Update module progress
+                if "module_progress" not in self.current_profile:
+                    self.current_profile["module_progress"] = {}
+                    
+                if module not in self.current_profile["module_progress"]:
+                    self.current_profile["module_progress"][module] = {"completed": 0, "total": 0}
+                    
+                self.current_profile["module_progress"][module]["completed"] += 1
+                
+                # Update total score and challenge count
+                self.current_profile["total_score"] = self.current_profile.get("total_score", 0) + score
+                self.current_profile["challenges_completed"] = self.current_profile.get("challenges_completed", 0) + 1
+                
+                # Check for module completion
+                module_completed = all(
+                    progress["completed"] >= progress.get("total", 1) 
+                    for progress in self.current_profile["module_progress"].values()
+                )
+                
+                if module_completed:
+                    self.current_profile["modules_completed"] = len(self.current_profile["module_progress"])
+                
+                # Update last activity
+                self.current_profile["last_activity"] = datetime.now().isoformat()
+                
+                # Update streak
+                self._update_streak()
+                
+                # Update leaderboard
+                self._update_leaderboard()
+                
+                # Save the updated profile
+                self.save_profile()
+                return True
+                
+        except Exception as e:
+            console.print(f"[red]Error updating progress: {e}[/red]")
             
-        self._save_profile(self.current_profile)
+        return False
     
     def get_progress_summary(self) -> Dict[str, Any]:
         """Get a summary of the current profile's progress.
@@ -198,6 +237,124 @@ class ProfileManager:
         table.add_row("Login Streak", f"{progress['login_streak']} days")
         
         console.print(table)
+    
+    def show_profile(self):
+        """Display the current user's profile information with badges and stats."""
+        if not self.current_profile:
+            console.print("[yellow]No profile loaded.[/yellow]")
+            return
+            
+        # Basic profile info
+        profile_table = Table(show_header=False, box=None)
+        profile_table.add_column("", style="cyan", width=20)
+        profile_table.add_column("", style="")
+        
+        profile_table.add_row("Username", f"[bold]{self.current_profile.get('username', 'Unknown User')}[/bold]")
+        profile_table.add_row("Total Score", f"[green]{self.current_profile.get('total_score', 0)}[/green]")
+        profile_table.add_row("Challenges", f"{self.current_profile.get('challenges_completed', 0)} completed")
+        profile_table.add_row("Current Streak", f"{self.current_profile.get('current_streak', 0)} days")
+        profile_table.add_row("Longest Streak", f"{self.current_profile.get('longest_streak', 0)} days")
+        
+        # Show modules progress if any
+        if "module_progress" in self.current_profile and self.current_profile["module_progress"]:
+            modules = []
+            for mod, prog in self.current_profile["module_progress"].items():
+                completed = prog.get("completed", 0)
+                total = prog.get("total", 1)
+                progress = f"{completed}/{total}"
+                modules.append(f"• {mod}: {progress}")
+            
+            profile_table.add_row("\nModules", "\n".join(modules))
+        
+        console.print(Panel(profile_table, title="[bold]Profile[/bold]"))
+        
+        # Show badges
+        if hasattr(badge_manager, 'display_badges'):
+            badge_manager.display_badges(self.current_profile)
+            
+        # Show leaderboard position
+        leaderboard_stats = leaderboard.get_leaderboard(100)  # Get a large enough number to find current user
+        user_rank = next(
+            (entry["rank"] for entry in leaderboard_stats 
+             if entry["username"] == self.current_profile.get("username")), 
+            None
+        )
+        
+        if user_rank:
+            console.print(f"\n[bold]Leaderboard Rank:[/bold] #{user_rank}")
+        
+        console.print("\n[dim]Last active:[/dim]", 
+                     self.current_profile.get("last_activity", "Never"))
+    
+    def _update_streak(self) -> None:
+        """Update the user's login streak."""
+        if not self.current_profile:
+            return
+            
+        today = datetime.now().date()
+        last_login_str = self.current_profile.get("last_login")
+        
+        if not last_login_str:
+            # First login
+            self.current_profile["current_streak"] = 1
+            self.current_profile["longest_streak"] = 1
+        else:
+            last_login = datetime.fromisoformat(last_login_str).date()
+            days_since = (today - last_login).days
+            
+            if days_since == 0:
+                # Already logged in today
+                return
+            elif days_since == 1:
+                # Consecutive day
+                self.current_profile["current_streak"] = self.current_profile.get("current_streak", 0) + 1
+            else:
+                # Broken streak
+                self.current_profile["current_streak"] = 1
+            
+            # Update longest streak if needed
+            if self.current_profile["current_streak"] > self.current_profile.get("longest_streak", 0):
+                self.current_profile["longest_streak"] = self.current_profile["current_streak"]
+        
+        # Update last login
+        self.current_profile["last_login"] = today.isoformat()
+    
+    def _update_leaderboard(self) -> None:
+        """Update the leaderboard with the current profile's stats."""
+        if not self.current_profile or "username" not in self.current_profile:
+            return
+            
+        stats = {
+            "challenges_completed": self.current_profile.get("challenges_completed", 0),
+            "total_score": self.current_profile.get("total_score", 0),
+            "last_activity": datetime.now().isoformat(),
+            "badges": [badge.id for badge in badge_manager.get_earned_badges(self.current_profile)]
+        }
+        
+        leaderboard.update_score(self.current_profile["username"], stats)
+    
+    def save_profile(self) -> bool:
+        """Save the current profile to disk.
+        
+        Returns:
+            bool: True if saved successfully, False otherwise
+        """
+        if not self.current_profile or "username" not in self.current_profile:
+            return False
+            
+        try:
+            # Ensure all directories exist
+            self.profiles_dir.mkdir(exist_ok=True, parents=True)
+            
+            # Save profile
+            profile_file = self.profiles_dir / f"{self.current_profile['username']}.json"
+            with open(profile_file, 'w') as f:
+                json.dump(self.current_profile, f, indent=2)
+                
+            return True
+        except Exception as e:
+            console.print(f"[red]Error saving profile: {e}[/red]")
+            return False
     
     def _save_profile(self, profile: Dict[str, Any]) -> None:
         """Save profile data to disk.
