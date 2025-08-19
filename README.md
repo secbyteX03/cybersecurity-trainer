@@ -64,25 +64,60 @@ cybersecurity-trainer/
 
 - Python 3.6 or higher
 - pip (Python package manager)
-- Windows, macOS, or Linux operating system
+- venv (Python virtual environment)
+
+### Kali Linux Specific Setup
+
+1. First, ensure your system is up to date:
+   ```bash
+   sudo apt update && sudo apt upgrade -y
+   ```
+
+2. Install required system packages:
+   ```bash
+   sudo apt install -y python3-pip python3-venv
+   ```
 
 ## Quick Start
 
-1. **Clone the repository**:
+1. Clone the repository:
    ```bash
    git clone https://github.com/secbyteX03/cybersecurity-trainer.git
    cd cybersecurity-trainer
    ```
 
-2. **Install dependencies**:
+2. Create and activate a Python virtual environment:
    ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Upgrade pip and install the required packages:
+   ```bash
+   pip install --upgrade pip
    pip install -r requirements.txt
    ```
 
-3. **Run the trainer**:
+4. Run the trainer:
    ```bash
    python trainer.py
    ```
+
+### Troubleshooting
+
+If you encounter permission issues:
+- Make sure you've activated the virtual environment before running the trainer
+- If you see "Permission denied" errors, try:
+  ```bash
+  chmod +x trainer.py
+  ```
+
+If you get package installation errors:
+- Ensure you have all build dependencies installed:
+  ```bash
+  sudo apt install -y python3-dev build-essential
+  ```
+- Try installing packages one by one if the requirements file fails
 
 ## How to Use
 

@@ -125,23 +125,50 @@ class CyberSecTrainer:
         if not self.current_profile:
             return
             
-        challenge_trainer = challenge.ChallengeModule(self.current_profile['progress'])
-        completed = challenge_trainer.run()
+        challenge_module = challenge.ChallengeModule(self.current_profile['progress'])
+        challenge_module.run()
         
-        if completed:
-            # Update profile with completed challenges
-            self.profile_manager.update_progress("challenge", completed)
-            self.current_profile = self.profile_manager.load_profile(self.current_profile['username'])
+    def run_guided_lessons(self):
+        """Run guided lessons that provide a structured learning path."""
+        if not self.current_profile:
+            return
             
-            # Show completion message
-            if len(completed) == 1:
-                console.print(f"\n[green]Challenge '{completed[0]}' completed![/green]")
+        console.print("\n=== GUIDED LESSONS ===\n", style="bold green")
+        console.print("Welcome to the guided lessons! This will take you through a structured learning path.")
+        console.print("Each lesson builds on the previous one to help you master cybersecurity concepts.\n")
+        
+        # Define the learning path with module names and their display names
+        learning_path = [
+            ("basics", "Linux Basics"),
+            ("networking", "Networking"),
+            ("permissions", "File Permissions"),
+            ("forensics", "Digital Forensics"),
+            ("challenges", "Challenges")
+        ]
+        
+        # Run each module in the learning path
+        for module_name, display_name in learning_path:
+            console.print(f"\n=== {display_name.upper()} ===\n", style="bold blue")
+            console.print(f"Starting {display_name} lessons...\n")
+            
+            if module_name == "challenges":
+                self.run_challenges()
             else:
-                console.print(f"\n[green]Completed {len(completed)} challenges![/green]")
+                self.run_module(module_name)
+                
+            console.print(f"\n[green]✓ Completed {display_name} lessons![/green]")
             
-            # Pause before returning to menu
-            console.print("\nPress Enter to return to the main menu...", style="dim")
-            input()
+            # Ask if user wants to continue to next module
+            if module_name != learning_path[-1][0]:  # Skip for the last module
+                next_module = learning_path[learning_path.index((module_name, display_name)) + 1][1]
+                choice = Prompt.choices(
+                    f"\nContinue to {next_module}?",
+                    choices=["yes", "no"],
+                    default="yes"
+                )
+                if choice.lower() != "yes":
+                    console.print("\nReturning to main menu...")
+                    break
 
     def run(self):
         """Main entry point for the trainer."""
