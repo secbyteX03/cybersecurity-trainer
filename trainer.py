@@ -96,7 +96,7 @@ class CyberSecTrainer:
             
         module_map = {
             "basics": ("Linux Basics", basics.BasicsModule()),
-            "networking": ("Networking", networking.Networking()),
+            "networking": ("Networking", networking.NetworkingModule()),
             "forensics": ("Digital Forensics", forensics.ForensicsModule()),
             "permissions": ("Permissions", permissions.PermissionsModule())
         }
